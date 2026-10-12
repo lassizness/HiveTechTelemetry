@@ -1,0 +1,30 @@
+# HiveTechTelemetry example.
+# The real htb_ token must be entered only on the server and never committed.
+
+telemetry {
+    B:enabled=true
+}
+
+api {
+    S:apiUrl=https://hivegrid.online/internal/game
+    S:serverCode=HiveTech
+    S:token=
+}
+
+timing {
+    I:batchIntervalSeconds=5
+    I:heartbeatIntervalSeconds=60
+    I:playtimeIntervalSeconds=60
+}
+
+queue {
+    I:maxBatchSize=200
+    I:maxQueueEvents=250000
+}
+
+http {
+    I:connectTimeoutSeconds=3
+    I:readTimeoutSeconds=8
+    I:retryBaseSeconds=5
+    I:retryMaxSeconds=300
+}
