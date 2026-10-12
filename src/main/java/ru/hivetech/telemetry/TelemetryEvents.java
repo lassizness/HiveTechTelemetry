@@ -9,17 +9,25 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
 import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import ru.hivetech.telemetry.compat.TelemetryAdapterRegistry;
 
 public final class TelemetryEvents {
     private final TelemetryCollector collector;
+    private final TelemetryAdapterRegistry adapters;
 
-    public TelemetryEvents(TelemetryCollector collector) {
+    public TelemetryEvents(
+        TelemetryCollector collector,
+        TelemetryAdapterRegistry adapters
+    ) {
         this.collector = collector;
+        this.adapters = adapters;
     }
 
     @SubscribeEvent
@@ -60,13 +68,30 @@ public final class TelemetryEvents {
         ResourceLocation id =
             event.getState().getBlock().getRegistryName();
 
+        String objectId =
+            blockObject(event.getState());
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
         collector.emitCounter(
             player,
             "block.break",
             TelemetryCompat.sourceFor(id),
-            blockObject(event.getState()),
+            objectId,
             1L,
-            collector.playerMetadata(player)
+            metadata
+        );
+
+        adapters.block(
+            player,
+            "break",
+            event.getState(),
+            event.getWorld(),
+            event.getPos(),
+            objectId,
+            metadata,
+            collector
         );
     }
 
@@ -80,13 +105,30 @@ public final class TelemetryEvents {
         ResourceLocation id =
             event.getPlacedBlock().getBlock().getRegistryName();
 
+        String objectId =
+            blockObject(event.getPlacedBlock());
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
         collector.emitCounter(
             player,
             "block.place",
             TelemetryCompat.sourceFor(id),
-            blockObject(event.getPlacedBlock()),
+            objectId,
             1L,
-            collector.playerMetadata(player)
+            metadata
+        );
+
+        adapters.block(
+            player,
+            "place",
+            event.getPlacedBlock(),
+            event.getWorld(),
+            event.getPos(),
+            objectId,
+            metadata,
+            collector
         );
     }
 
@@ -257,6 +299,56 @@ public final class TelemetryEvents {
         );
     }
 
+    @SubscribeEvent(
+        priority = EventPriority.LOWEST,
+        receiveCanceled = false
+    )
+    public void onRightClickBlock(
+        PlayerInteractEvent.RightClickBlock event
+    ) {
+        EntityPlayerMP player =
+            serverPlayer(event.getEntityPlayer());
+
+        if (player == null) {
+            return;
+        }
+
+        ItemStack held =
+            player.getHeldItem(event.getHand());
+
+        if (held == null || held.isEmpty()) {
+            return;
+        }
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
+        metadata.addProperty(
+            "target_x",
+            event.getPos().getX()
+        );
+        metadata.addProperty(
+            "target_y",
+            event.getPos().getY()
+        );
+        metadata.addProperty(
+            "target_z",
+            event.getPos().getZ()
+        );
+
+        adapters.useOnBlock(
+            player,
+            held,
+            event.getWorld().getBlockState(
+                event.getPos()
+            ),
+            event.getWorld(),
+            event.getPos(),
+            metadata,
+            collector
+        );
+    }
+
     private void emitItemCounter(
         EntityPlayerMP player,
         String type,
@@ -269,13 +361,32 @@ public final class TelemetryEvents {
         ResourceLocation id =
             stack.getItem().getRegistryName();
 
+        String objectId = itemObject(stack);
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
         collector.emitCounter(
             player,
             type,
             TelemetryCompat.sourceFor(id),
-            itemObject(stack),
+            objectId,
             Math.max(1, stack.getCount()),
-            collector.playerMetadata(player)
+            metadata
+        );
+
+        String action =
+            type.startsWith("item.")
+                ? type.substring("item.".length())
+                : type;
+
+        adapters.item(
+            player,
+            action,
+            stack,
+            objectId,
+            metadata,
+            collector
         );
     }
 
