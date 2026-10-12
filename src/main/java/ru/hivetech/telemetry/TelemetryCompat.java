@@ -35,8 +35,30 @@ public final class TelemetryCompat {
             return "forestry";
         }
 
+        if ("gendustry".equals(namespace)) {
+            return "gendustry";
+        }
+
+        if (
+            "binniecore".equals(namespace)
+            || "extrabees".equals(namespace)
+            || "extratrees".equals(namespace)
+            || "genetics".equals(namespace)
+            || "botany".equals(namespace)
+        ) {
+            return "binnie";
+        }
+
         if (namespace != null && namespace.startsWith("thermal")) {
             return "thermal";
+        }
+
+        if ("immersiveengineering".equals(namespace)) {
+            return "immersiveengineering";
+        }
+
+        if ("industrialforegoing".equals(namespace)) {
+            return "industrialforegoing";
         }
 
         return "forge";
@@ -60,6 +82,23 @@ public final class TelemetryCompat {
         }
         if (Loader.isModLoaded("forestry")) {
             result.add("forestry");
+        }
+        if (Loader.isModLoaded("gendustry")) {
+            result.add("gendustry");
+        }
+        if (
+            Loader.isModLoaded("binniecore")
+            || Loader.isModLoaded("extrabees")
+            || Loader.isModLoaded("extratrees")
+            || Loader.isModLoaded("genetics")
+        ) {
+            result.add("binnie");
+        }
+        if (Loader.isModLoaded("immersiveengineering")) {
+            result.add("immersiveengineering");
+        }
+        if (Loader.isModLoaded("industrialforegoing")) {
+            result.add("industrialforegoing");
         }
 
         return Collections.unmodifiableList(result);
