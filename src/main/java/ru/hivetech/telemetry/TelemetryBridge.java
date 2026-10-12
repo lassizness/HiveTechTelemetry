@@ -26,6 +26,8 @@ public final class TelemetryBridge {
     private volatile String lastError = "";
     private volatile long lastSuccessAt;
     private volatile long lastHeartbeatAt;
+    private volatile long lastBatchAt;
+    private volatile int lastBatchSize;
     private volatile long sentEvents;
     private volatile long duplicateEvents;
     private volatile long unresolvedPlayers;
@@ -208,6 +210,9 @@ public final class TelemetryBridge {
             queue.removeFirst(batch.size());
             queue.persistIfDirty();
 
+            lastBatchAt = System.currentTimeMillis();
+            lastBatchSize = batch.size();
+
             sentEvents += response.getAccepted();
             duplicateEvents += response.getDuplicates();
             unresolvedPlayers +=
@@ -327,6 +332,14 @@ public final class TelemetryBridge {
 
     public long getLastHeartbeatAt() {
         return lastHeartbeatAt;
+    }
+
+    public long getLastBatchAt() {
+        return lastBatchAt;
+    }
+
+    public int getLastBatchSize() {
+        return lastBatchSize;
     }
 
     public long getSentEvents() {
