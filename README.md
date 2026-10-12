@@ -92,6 +92,9 @@ soon as possible.
 
 ## Build
 
+Pull requests are compiled by GitHub Actions with Java 8.
+
+
 The project intentionally follows the same build chain as HiveTechModeration:
 
 ```bash
