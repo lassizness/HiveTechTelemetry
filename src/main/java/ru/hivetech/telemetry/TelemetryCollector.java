@@ -129,7 +129,7 @@ public final class TelemetryCollector {
         long amount,
         JsonObject metadata
     ) {
-        if (!config.isEnabled()) {
+        if (!config.isEnabled() || !config.hasCredentials()) {
             return;
         }
 
@@ -158,7 +158,7 @@ public final class TelemetryCollector {
         long amount,
         JsonObject metadata
     ) {
-        if (!config.isEnabled() || amount <= 0L) {
+        if (!config.isEnabled() || !config.hasCredentials() || amount <= 0L) {
             return;
         }
 
