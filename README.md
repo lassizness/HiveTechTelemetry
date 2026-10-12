@@ -120,7 +120,7 @@ and Gradle 4.10.3.
 Output:
 
 ```text
-build/libs/HiveTechTelemetry-1.0.0.jar
+build/libs/HiveTechTelemetry-1.1.0.jar
 ```
 
 ## Safety
