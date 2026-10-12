@@ -17,6 +17,7 @@ public final class TelemetryBridge {
     private volatile boolean started;
     private volatile boolean forceFlush;
     private volatile long nextBatchAt;
+    private volatile long nextBufferFlushAt;
     private volatile long nextHeartbeatAt;
     private volatile long retryAfter;
 
@@ -62,6 +63,7 @@ public final class TelemetryBridge {
         started = true;
         long now = System.currentTimeMillis();
         nextBatchAt = now;
+        nextBufferFlushAt = now;
         nextHeartbeatAt = now;
 
         executor = Executors.newSingleThreadScheduledExecutor(
@@ -132,10 +134,19 @@ public final class TelemetryBridge {
             return;
         }
 
-        collector.flushCounters();
-        queue.persistIfDirty();
-
         long now = System.currentTimeMillis();
+
+        if (
+            forceFlush
+            || now >= nextBufferFlushAt
+        ) {
+            collector.flushCounters();
+            queue.persistIfDirty();
+
+            nextBufferFlushAt =
+                now
+                + config.getBatchIntervalSeconds() * 1000L;
+        }
 
         if (now < retryAfter) {
             return;
