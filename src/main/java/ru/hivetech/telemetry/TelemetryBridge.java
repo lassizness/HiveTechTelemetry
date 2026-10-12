@@ -80,11 +80,14 @@ public final class TelemetryBridge {
         );
 
         HiveTechTelemetry.LOG.info(
-            "HiveTech Telemetry started: api={}, serverCode={}, queuedEvents={}, integrations={}",
+            "HiveTech Telemetry started: api={}, serverCode={}, queuedEvents={}, integrations={}, adapters={}",
             config.getApiUrl(),
             config.getServerCode(),
             queue.size(),
-            TelemetryCompat.detectedIntegrations()
+            TelemetryCompat.detectedIntegrations(),
+            HiveTechTelemetry.getAdapters() == null
+                ? "[]"
+                : HiveTechTelemetry.getAdapters().descriptions()
         );
     }
 
