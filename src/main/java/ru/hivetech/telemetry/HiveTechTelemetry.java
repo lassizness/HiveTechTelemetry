@@ -1,6 +1,7 @@
 package ru.hivetech.telemetry;
 
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -69,9 +70,11 @@ public final class HiveTechTelemetry {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        MinecraftForge.EVENT_BUS.register(
-            new TelemetryEvents(collector)
-        );
+        TelemetryEvents events =
+            new TelemetryEvents(collector);
+
+        MinecraftForge.EVENT_BUS.register(events);
+        FMLCommonHandler.instance().bus().register(events);
     }
 
     @Mod.EventHandler
