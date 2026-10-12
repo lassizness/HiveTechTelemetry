@@ -9,6 +9,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import org.apache.logging.log4j.Logger;
+import ru.hivetech.telemetry.compat.TelemetryAdapterRegistry;
 
 import java.io.File;
 
@@ -23,13 +24,14 @@ import java.io.File;
 public final class HiveTechTelemetry {
     public static final String MODID = "hivetechtelemetry";
     public static final String NAME = "HiveTech Telemetry";
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
 
     public static Logger LOG;
 
     private static TelemetryConfig config;
     private static TelemetryQueue queue;
     private static TelemetryCollector collector;
+    private static TelemetryAdapterRegistry adapters;
     private static TelemetryBridge bridge;
 
     @Mod.EventHandler
@@ -59,19 +61,26 @@ public final class HiveTechTelemetry {
         collector =
             new TelemetryCollector(queue, config);
 
+        adapters =
+            new TelemetryAdapterRegistry();
+
         LOG.info(
-            "HiveTech Telemetry initialized. serverCode={}, credentials={}, queuedEvents={}, integrations={}",
+            "HiveTech Telemetry initialized. serverCode={}, credentials={}, queuedEvents={}, integrations={}, adapters={}",
             config.getServerCode(),
             config.hasCredentials() ? "configured" : "missing",
             queue.size(),
-            TelemetryCompat.detectedIntegrations()
+            TelemetryCompat.detectedIntegrations(),
+            adapters.descriptions()
         );
     }
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         TelemetryEvents events =
-            new TelemetryEvents(collector);
+            new TelemetryEvents(
+                collector,
+                adapters
+            );
 
         MinecraftForge.EVENT_BUS.register(events);
         FMLCommonHandler.instance().bus().register(events);
@@ -124,5 +133,9 @@ public final class HiveTechTelemetry {
 
     public static TelemetryQueue getQueue() {
         return queue;
+    }
+
+    public static TelemetryAdapterRegistry getAdapters() {
+        return adapters;
     }
 }

@@ -1,6 +1,7 @@
 package ru.hivetech.telemetry;
 
 import com.google.gson.JsonObject;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.player.EntityPlayer;
@@ -9,17 +10,30 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
 import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import ru.hivetech.telemetry.compat.TelemetryAdapterRegistry;
+
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class TelemetryEvents {
     private final TelemetryCollector collector;
+    private final TelemetryAdapterRegistry adapters;
+    private final Queue<DeferredPlacement> deferredPlacements =
+        new ConcurrentLinkedQueue<>();
 
-    public TelemetryEvents(TelemetryCollector collector) {
+    public TelemetryEvents(
+        TelemetryCollector collector,
+        TelemetryAdapterRegistry adapters
+    ) {
         this.collector = collector;
+        this.adapters = adapters;
     }
 
     @SubscribeEvent
@@ -60,13 +74,30 @@ public final class TelemetryEvents {
         ResourceLocation id =
             event.getState().getBlock().getRegistryName();
 
+        String objectId =
+            blockObject(event.getState());
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
         collector.emitCounter(
             player,
             "block.break",
             TelemetryCompat.sourceFor(id),
-            blockObject(event.getState()),
+            objectId,
             1L,
-            collector.playerMetadata(player)
+            metadata
+        );
+
+        adapters.block(
+            player,
+            "break",
+            event.getState(),
+            event.getWorld(),
+            event.getPos(),
+            objectId,
+            metadata,
+            collector
         );
     }
 
@@ -80,13 +111,29 @@ public final class TelemetryEvents {
         ResourceLocation id =
             event.getPlacedBlock().getBlock().getRegistryName();
 
+        String objectId =
+            blockObject(event.getPlacedBlock());
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
         collector.emitCounter(
             player,
             "block.place",
             TelemetryCompat.sourceFor(id),
-            blockObject(event.getPlacedBlock()),
+            objectId,
             1L,
-            collector.playerMetadata(player)
+            metadata
+        );
+
+        deferredPlacements.add(
+            new DeferredPlacement(
+                player,
+                event.getWorld(),
+                event.getPos().toImmutable(),
+                objectId,
+                metadata
+            )
         );
     }
 
@@ -132,6 +179,59 @@ public final class TelemetryEvents {
             "item.pickup",
             event.getStack()
         );
+    }
+
+    @SubscribeEvent
+    public void onServerTick(
+        TickEvent.ServerTickEvent event
+    ) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        int count = deferredPlacements.size();
+
+        for (int i = 0; i < count; i++) {
+            DeferredPlacement placement =
+                deferredPlacements.poll();
+
+            if (placement == null) {
+                break;
+            }
+
+            EntityPlayerMP player =
+                placement.player;
+
+            if (
+                player == null
+                || player.world == null
+                || player.world.isRemote
+                || placement.world == null
+            ) {
+                continue;
+            }
+
+            IBlockState state;
+
+            try {
+                state = placement.world.getBlockState(
+                    placement.pos
+                );
+            } catch (RuntimeException ignored) {
+                continue;
+            }
+
+            adapters.block(
+                player,
+                "place",
+                state,
+                placement.world,
+                placement.pos,
+                placement.objectId,
+                placement.metadata,
+                collector
+            );
+        }
     }
 
     @SubscribeEvent
@@ -257,6 +357,56 @@ public final class TelemetryEvents {
         );
     }
 
+    @SubscribeEvent(
+        priority = EventPriority.LOWEST,
+        receiveCanceled = false
+    )
+    public void onRightClickBlock(
+        PlayerInteractEvent.RightClickBlock event
+    ) {
+        EntityPlayerMP player =
+            serverPlayer(event.getEntityPlayer());
+
+        if (player == null) {
+            return;
+        }
+
+        ItemStack held =
+            player.getHeldItem(event.getHand());
+
+        if (held == null || held.isEmpty()) {
+            return;
+        }
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
+        metadata.addProperty(
+            "target_x",
+            event.getPos().getX()
+        );
+        metadata.addProperty(
+            "target_y",
+            event.getPos().getY()
+        );
+        metadata.addProperty(
+            "target_z",
+            event.getPos().getZ()
+        );
+
+        adapters.useOnBlock(
+            player,
+            held,
+            event.getWorld().getBlockState(
+                event.getPos()
+            ),
+            event.getWorld(),
+            event.getPos(),
+            metadata,
+            collector
+        );
+    }
+
     private void emitItemCounter(
         EntityPlayerMP player,
         String type,
@@ -269,13 +419,32 @@ public final class TelemetryEvents {
         ResourceLocation id =
             stack.getItem().getRegistryName();
 
+        String objectId = itemObject(stack);
+
+        JsonObject metadata =
+            collector.playerMetadata(player);
+
         collector.emitCounter(
             player,
             type,
             TelemetryCompat.sourceFor(id),
-            itemObject(stack),
+            objectId,
             Math.max(1, stack.getCount()),
-            collector.playerMetadata(player)
+            metadata
+        );
+
+        String action =
+            type.startsWith("item.")
+                ? type.substring("item.".length())
+                : type;
+
+        adapters.item(
+            player,
+            action,
+            stack,
+            objectId,
+            metadata,
+            collector
         );
     }
 
@@ -317,6 +486,28 @@ public final class TelemetryEvents {
         return meta == 0
             ? value
             : value + "@" + meta;
+    }
+
+    private static final class DeferredPlacement {
+        private final EntityPlayerMP player;
+        private final net.minecraft.world.World world;
+        private final net.minecraft.util.math.BlockPos pos;
+        private final String objectId;
+        private final JsonObject metadata;
+
+        private DeferredPlacement(
+            EntityPlayerMP player,
+            net.minecraft.world.World world,
+            net.minecraft.util.math.BlockPos pos,
+            String objectId,
+            JsonObject metadata
+        ) {
+            this.player = player;
+            this.world = world;
+            this.pos = pos;
+            this.objectId = objectId;
+            this.metadata = metadata;
+        }
     }
 
     private static EntityPlayerMP serverPlayer(

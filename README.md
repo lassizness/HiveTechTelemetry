@@ -31,8 +31,13 @@ The first version records:
 
 High-frequency events are aggregated before they enter the durable queue.
 
-IC2, Applied Energistics 2, Thermal and Forestry registry IDs are recognized
-immediately by the generic Forge layer. See [docs/events.md](docs/events.md).
+IC2, Applied Energistics 2 Extended Life, Forestry/Gendustry/Binnie,
+Thermal Expansion/Foundation, Immersive Engineering and Industrial Foregoing
+are handled by optional deep adapters on top of the generic Forge layer.
+
+The adapters expose normalized machine/component/tool/genetics events without
+hard-linking the server to third-party mod classes. See
+[docs/events.md](docs/events.md).
 
 ## Backend
 
@@ -85,10 +90,13 @@ Operator-only:
 ```
 
 `status` shows queue size, buffered counters, online players, sent/duplicate
-counts, HTTP status, failures and the latest error.
+counts, HTTP status, failures, last successful batch and the latest error.
 
 `flush` asks the worker to flush buffered counters and retry the queue as
 soon as possible.
+
+`adapters` prints the active technology adapters together with Forge-reported
+mod versions.
 
 ## Build
 
@@ -112,7 +120,7 @@ and Gradle 4.10.3.
 Output:
 
 ```text
-build/libs/HiveTechTelemetry-1.0.0.jar
+build/libs/HiveTechTelemetry-1.1.0.jar
 ```
 
 ## Safety

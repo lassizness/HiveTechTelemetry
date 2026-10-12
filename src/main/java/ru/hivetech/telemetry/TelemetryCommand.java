@@ -18,7 +18,7 @@ public final class TelemetryCommand extends CommandBase {
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/httelemetry <status|flush>";
+        return "/httelemetry <status|flush|adapters>";
     }
 
     @Override
@@ -56,6 +56,38 @@ public final class TelemetryCommand extends CommandBase {
                     "[HiveTechTelemetry] Flush requested."
                 )
             );
+            return;
+        }
+
+        if ("adapters".equals(action)) {
+            if (HiveTechTelemetry.getAdapters() == null) {
+                sender.sendMessage(
+                    new TextComponentString(
+                        "[HiveTechTelemetry] No adapters initialized."
+                    )
+                );
+                return;
+            }
+
+            sender.sendMessage(
+                new TextComponentString(
+                    "[HiveTechTelemetry] Adapters:"
+                )
+            );
+
+            for (
+                String description
+                : HiveTechTelemetry
+                    .getAdapters()
+                    .descriptions()
+            ) {
+                sender.sendMessage(
+                    new TextComponentString(
+                        " - " + description
+                    )
+                );
+            }
+
             return;
         }
 
@@ -107,6 +139,14 @@ public final class TelemetryCommand extends CommandBase {
                 + formatTime(bridge.getLastSuccessAt())
                 + ", heartbeat: "
                 + formatTime(bridge.getLastHeartbeatAt())
+            )
+        );
+        sender.sendMessage(
+            new TextComponentString(
+                "Last batch: "
+                + formatTime(bridge.getLastBatchAt())
+                + ", size: "
+                + bridge.getLastBatchSize()
             )
         );
         sender.sendMessage(
