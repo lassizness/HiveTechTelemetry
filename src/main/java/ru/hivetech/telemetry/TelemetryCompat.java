@@ -16,7 +16,7 @@ public final class TelemetryCompat {
             return "forge";
         }
 
-        String namespace = id.getNamespace();
+        String namespace = id.getResourceDomain();
 
         if ("ic2".equals(namespace)) {
             return "ic2";
