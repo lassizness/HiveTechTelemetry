@@ -42,7 +42,7 @@ Use:
 
 to see the actual loaded mod versions detected by Forge.
 
-Adapters enrich generic events with tile class, unlocalized item name and
+Adapters enrich generic events with registry IDs, item/tile classes and
 normalized technology events. These normalized events are intended for
 achievements and rankings.
 
@@ -271,8 +271,7 @@ Adapter events may add safe diagnostic metadata such as:
   "dimension": 0,
   "adapter": "ic2",
   "tile_class": "ic2.core.block.machine.tileentity.TileEntityMacerator",
-  "item_class": "...",
-  "unlocalized_name": "..."
+  "item_class": "..."
 }
 ```
 
