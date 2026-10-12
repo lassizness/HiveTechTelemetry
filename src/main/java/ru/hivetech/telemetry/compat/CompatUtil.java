@@ -40,11 +40,6 @@ public final class CompatUtil {
         append(value, id == null ? null : id.toString());
         append(value, stack.getItem().getClass().getName());
 
-        try {
-            append(value, stack.getUnlocalizedName());
-        } catch (RuntimeException ignored) {
-        }
-
         return value
             .toString()
             .toLowerCase(Locale.ROOT);
