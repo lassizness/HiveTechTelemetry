@@ -3,7 +3,6 @@ package ru.hivetech.telemetry;
 import com.google.gson.JsonObject;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
-import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
@@ -11,7 +10,6 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
-import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
@@ -66,7 +64,7 @@ public final class TelemetryEvents {
             player,
             "block.break",
             TelemetryCompat.sourceFor(id),
-            id == null ? null : id.toString(),
+            blockObject(event.getState()),
             1L,
             collector.playerMetadata(player)
         );
@@ -86,7 +84,7 @@ public final class TelemetryEvents {
             player,
             "block.place",
             TelemetryCompat.sourceFor(id),
-            id == null ? null : id.toString(),
+            blockObject(event.getPlacedBlock()),
             1L,
             collector.playerMetadata(player)
         );
@@ -121,23 +119,18 @@ public final class TelemetryEvents {
     }
 
     @SubscribeEvent
-    public void onPickup(EntityItemPickupEvent event) {
+    public void onPickup(PlayerEvent.ItemPickupEvent event) {
         EntityPlayerMP player =
-            serverPlayer(event.getEntityPlayer());
+            serverPlayer(event.player);
 
         if (player == null) {
-            return;
-        }
-
-        EntityItem entityItem = event.getItem();
-        if (entityItem == null) {
             return;
         }
 
         emitItemCounter(
             player,
             "item.pickup",
-            entityItem.getItem()
+            event.getStack()
         );
     }
 
@@ -280,10 +273,50 @@ public final class TelemetryEvents {
             player,
             type,
             TelemetryCompat.sourceFor(id),
-            id == null ? null : id.toString(),
+            itemObject(stack),
             Math.max(1, stack.getCount()),
             collector.playerMetadata(player)
         );
+    }
+
+    private static String itemObject(ItemStack stack) {
+        ResourceLocation id =
+            stack.getItem().getRegistryName();
+
+        if (id == null) {
+            return null;
+        }
+
+        String value = id.toString();
+        int meta = stack.getMetadata();
+
+        return meta == 0
+            ? value
+            : value + "@" + meta;
+    }
+
+    private static String blockObject(
+        net.minecraft.block.state.IBlockState state
+    ) {
+        ResourceLocation id =
+            state.getBlock().getRegistryName();
+
+        if (id == null) {
+            return null;
+        }
+
+        String value = id.toString();
+        int meta;
+
+        try {
+            meta = state.getBlock().getMetaFromState(state);
+        } catch (RuntimeException ignored) {
+            meta = 0;
+        }
+
+        return meta == 0
+            ? value
+            : value + "@" + meta;
     }
 
     private static EntityPlayerMP serverPlayer(
