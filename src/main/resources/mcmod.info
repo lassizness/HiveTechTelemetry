@@ -1,0 +1,11 @@
+[
+  {
+    "modid": "hivetechtelemetry",
+    "name": "HiveTech Telemetry",
+    "description": "Server-side gameplay telemetry agent for HiveTech",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["HiveTech"],
+    "acceptableMinecraftVersions": "[1.12.2]"
+  }
+]
