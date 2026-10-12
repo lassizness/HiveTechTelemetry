@@ -38,6 +38,11 @@ This means achievements such as "craft an AE2 controller", "place an IC2
 machine", or "pick up a Forestry item" work before any deep compatibility
 adapter exists.
 
+Minecraft 1.12 frequently stores several variants under one registry ID. When
+the item/block metadata is non-zero, the object is emitted as
+`registry:name@meta`. For example, two IC2 machines sharing `ic2:te` can
+still produce different achievement counters.
+
 Deep adapter events such as AE2 autocrafting, Forestry mutations and IC2
 energy milestones will be added on top of this transport after pinning the
 exact installed mod API versions.
