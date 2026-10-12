@@ -1,6 +1,7 @@
 package ru.hivetech.telemetry;
 
 import com.google.gson.JsonObject;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.player.EntityPlayer;
@@ -18,9 +19,14 @@ import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import ru.hivetech.telemetry.compat.TelemetryAdapterRegistry;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 public final class TelemetryEvents {
     private final TelemetryCollector collector;
     private final TelemetryAdapterRegistry adapters;
+    private final Queue<DeferredPlacement> deferredPlacements =
+        new ConcurrentLinkedQueue<>();
 
     public TelemetryEvents(
         TelemetryCollector collector,
@@ -120,15 +126,14 @@ public final class TelemetryEvents {
             metadata
         );
 
-        adapters.block(
-            player,
-            "place",
-            event.getPlacedBlock(),
-            event.getWorld(),
-            event.getPos(),
-            objectId,
-            metadata,
-            collector
+        deferredPlacements.add(
+            new DeferredPlacement(
+                player,
+                event.getWorld(),
+                event.getPos().toImmutable(),
+                objectId,
+                metadata
+            )
         );
     }
 
@@ -174,6 +179,59 @@ public final class TelemetryEvents {
             "item.pickup",
             event.getStack()
         );
+    }
+
+    @SubscribeEvent
+    public void onServerTick(
+        TickEvent.ServerTickEvent event
+    ) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        int count = deferredPlacements.size();
+
+        for (int i = 0; i < count; i++) {
+            DeferredPlacement placement =
+                deferredPlacements.poll();
+
+            if (placement == null) {
+                break;
+            }
+
+            EntityPlayerMP player =
+                placement.player;
+
+            if (
+                player == null
+                || player.world == null
+                || player.world.isRemote
+                || placement.world == null
+            ) {
+                continue;
+            }
+
+            IBlockState state;
+
+            try {
+                state = placement.world.getBlockState(
+                    placement.pos
+                );
+            } catch (RuntimeException ignored) {
+                continue;
+            }
+
+            adapters.block(
+                player,
+                "place",
+                state,
+                placement.world,
+                placement.pos,
+                placement.objectId,
+                placement.metadata,
+                collector
+            );
+        }
     }
 
     @SubscribeEvent
@@ -428,6 +486,28 @@ public final class TelemetryEvents {
         return meta == 0
             ? value
             : value + "@" + meta;
+    }
+
+    private static final class DeferredPlacement {
+        private final EntityPlayerMP player;
+        private final net.minecraft.world.World world;
+        private final net.minecraft.util.math.BlockPos pos;
+        private final String objectId;
+        private final JsonObject metadata;
+
+        private DeferredPlacement(
+            EntityPlayerMP player,
+            net.minecraft.world.World world,
+            net.minecraft.util.math.BlockPos pos,
+            String objectId,
+            JsonObject metadata
+        ) {
+            this.player = player;
+            this.world = world;
+            this.pos = pos;
+            this.objectId = objectId;
+            this.metadata = metadata;
+        }
     }
 
     private static EntityPlayerMP serverPlayer(
