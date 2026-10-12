@@ -104,7 +104,7 @@ public final class CompatUtil {
             return new JsonObject();
         }
 
-        return metadata.deepCopy();
+        return metadata;
     }
 
     public static void addMachineMetadata(
