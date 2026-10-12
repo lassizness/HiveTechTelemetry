@@ -16,7 +16,12 @@ public final class TelemetryCompat {
             return "forge";
         }
 
-        String namespace = id.getResourceDomain();
+        String value = id.toString();
+        int separator = value.indexOf(':');
+        String namespace =
+            separator > 0
+                ? value.substring(0, separator)
+                : "minecraft";
 
         if ("ic2".equals(namespace)) {
             return "ic2";
