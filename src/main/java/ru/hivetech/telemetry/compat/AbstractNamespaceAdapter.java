@@ -79,14 +79,6 @@ public abstract class AbstractNamespaceAdapter
             stack.getItem().getClass().getName()
         );
 
-        try {
-            extra.addProperty(
-                "unlocalized_name",
-                stack.getUnlocalizedName()
-            );
-        } catch (RuntimeException ignored) {
-        }
-
         emitCounter(
             collector,
             player,
